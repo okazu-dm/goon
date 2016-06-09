@@ -115,7 +115,7 @@ func (g *Goon) extractKeys(src interface{}, putRequest bool) ([]*datastore.Key, 
 	keys := make([]*datastore.Key, l)
 	for i := 0; i < l; i++ {
 		vi := v.Index(i)
-		key, hasStringId, err := g.getStructKey(vi.Interface())
+		key, hasStringId, _, err := g.getStructKey(vi.Interface())
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func (g *Goon) Kind(src interface{}) string {
 
 // KeyError returns the key of src based on its properties.
 func (g *Goon) KeyError(src interface{}) (*datastore.Key, error) {
-	key, _, err := g.getStructKey(src)
+	key, _, _, err := g.getStructKey(src)
 	return key, err
 }
 
@@ -305,7 +305,7 @@ func (g *Goon) putMemoryMulti(src interface{}, exists []byte) {
 }
 
 func (g *Goon) putMemory(src interface{}) {
-	key, _, _ := g.getStructKey(src)
+	key, _, _, _ := g.getStructKey(src)
 	g.cacheLock.Lock()
 	defer g.cacheLock.Unlock()
 	g.cache[memkey(key)] = src
@@ -331,7 +331,7 @@ func (g *Goon) putMemcache(srcs []interface{}, exists []byte) error {
 			g.error(err)
 			return err
 		}
-		key, _, err := g.getStructKey(src)
+		key, _, expiration, err := g.getStructKey(src)
 		if err != nil {
 			return err
 		}
@@ -340,6 +340,7 @@ func (g *Goon) putMemcache(srcs []interface{}, exists []byte) error {
 		items[i] = &memcache.Item{
 			Key:   memkey(key),
 			Value: data,
+			Expiration: expiration,
 		}
 	}
 	memcacheTimeout := MemcachePutTimeoutSmall

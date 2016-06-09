@@ -690,7 +690,7 @@ func deserializeStructInternal(dec *gob.Decoder, fi *fieldInfo, fieldName string
 // getStructKey returns the key of the struct based in its reflected or
 // specified kind and id. The second return parameter is true if src has a
 // string id.
-func (g *Goon) getStructKey(src interface{}) (key *datastore.Key, hasStringId bool, err error) {
+func (g *Goon) getStructKey(src interface{}) (key *datastore.Key, hasStringId bool, expiration time.Duration,err error) {
 	v := reflect.Indirect(reflect.ValueOf(src))
 	t := v.Type()
 	k := t.Kind()
@@ -704,6 +704,7 @@ func (g *Goon) getStructKey(src interface{}) (key *datastore.Key, hasStringId bo
 	var stringID string
 	var intID int64
 	var kind string
+	var parseErr error
 
 	for i := 0; i < v.NumField(); i++ {
 		tf := t.Field(i)
@@ -751,6 +752,16 @@ func (g *Goon) getStructKey(src interface{}) (key *datastore.Key, hasStringId bo
 						return
 					}
 					parent = vf.Convert(dskeyType).Interface().(*datastore.Key)
+				}
+			} else if tagValue == "expiration" {
+				if expiration != 0 {
+					err = fmt.Errorf("goon: Only one field may be marked expiration")
+					return
+				}
+				expiration, parseErr = time.ParseDuration(tagValues[1])
+				if parseErr != nil {
+					err = fmt.Errorf("goon: Expiration parse error:(%v)", parseErr)
+					return
 				}
 			}
 		}
